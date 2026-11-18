@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>아침 별 모으기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#58c322;--green-d:#46a016;--green-l:#eaf8df;
+  --blue:#1fa8f0;--blue-d:#1489c8;--blue-l:#ddf2fe;
+  --gold:#ffc61a;--gold-d:#e0a500;
+  --red:#ff6b6b;--red-d:#e04848;--red-l:#ffe8e8;
+  --ink:#3c3c3c;--sub:#8b8b8b;--line:#e5e5e5;--line-d:#cfcfcf;--bg:#fff;
+  --star-l:#fff4c7;--star-l-d:#f0d47a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:'Jua',system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column;height:100dvh;-webkit-tap-highlight-color:transparent;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+/* 3D 그림은 글자 크기(em)를 따라 커짐 */
+img.e{width:1.15em;height:1.15em;vertical-align:-.2em;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
+/* 동그라미·버튼 안 그림은 글자 줄 위치가 아니라 칸의 정가운데에 (사파리는 버튼 안 정렬이 크롬과 달라서 직접 지정) */
+.node,.stone,.spk,.spk2,.icon,.tip>span{display:grid;place-items:center;padding:0}
+.node img.e,.stone img.e,.spk img.e,.spk2 img.e,.icon img.e,.tip img.e,.ti img.e,.big img.e,.mascot img.e{display:block;margin:0 auto}
+.node img.e{width:1.35em;height:1.35em}
+.choice span.multi{font-size:40px}
+.choice span{display:flex;justify-content:center;gap:2px}
+
+/* 위: 날짜·시계·별 */
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:2px solid var(--line)}
+.when{flex:1;line-height:1.1}
+#date{color:var(--sub);font-size:16px}
+#clock{font-size:30px}
+.chip{display:flex;align-items:center;gap:6px;font-size:22px;padding:6px 12px;border-radius:14px;border:2px solid var(--line)}
+.icon{border:0;background:none;font-size:26px;padding:6px}
+
+.bar{height:18px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--green);border-radius:99px;transition:width .4s;box-shadow:inset 0 -5px 0 rgba(0,0,0,.08),inset 0 4px 0 rgba(255,255,255,.35)}
+
+/* 오늘 카드: 출발까지 · 날씨 */
+.cards{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:18px}
+.tcard{display:flex;align-items:center;gap:12px;text-align:left;background:#fff;border:2px solid var(--line);border-bottom-width:5px;border-radius:20px;padding:12px 14px;min-width:0}
+button.tcard:active{transform:translateY(3px);border-bottom-width:2px;margin-top:3px}
+.ti{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:34px;background:var(--green-l)}
+.wx .ti{background:var(--blue-l)}
+.tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tt small{color:var(--sub);font-size:15px}
+.tt b{font-weight:400;font-size:26px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leave .tt b{color:var(--green-d)}
+.wx .tt b{color:var(--blue-d)}
+.tt span{font-size:15px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tcard .bar{height:14px;margin:4px 0 2px}
+/* 출발 알림: soon(15분 전부터) 노란 막대 + 시계 흔들기, now(5분 전부터) 빨간 막대 깜빡 + 카드 번쩍 + 시계 세게 흔들기 */
+.leave[data-rush=soon]{border-color:var(--gold)}
+.leave[data-rush=soon] .tt b{color:var(--gold-d)}
+.leave[data-rush=soon] .bar i{background:var(--gold)}
+.leave[data-rush=soon] .ti{background:var(--star-l)}
+.leave[data-rush=soon] .ti img{animation:ring 1.6s ease-in-out infinite}
+.leave[data-rush=now]{border-color:var(--red);animation:flash 1s ease-in-out infinite}
+.leave[data-rush=now] .tt b{color:var(--red-d)}
+.leave[data-rush=now] .bar i{background:var(--red);animation:blink .5s steps(1) infinite}
+.leave[data-rush=now] .ti{background:var(--red-l)}
+.leave[data-rush=now] .ti img{animation:ring .7s ease-in-out infinite}
+@keyframes ring{0%,45%,100%{transform:rotate(0)}5%,15%,25%,35%{transform:rotate(-16deg)}10%,20%,30%,40%{transform:rotate(16deg)}}
+@keyframes flash{50%{background:var(--red-l)}}
+@keyframes blink{50%{opacity:.3}}
+
+/* 안내 카드(날씨·옷 입기 도움말) */
+.tips{display:flex;flex-direction:column;gap:10px;margin:0 0 22px}
+.tip{display:flex;align-items:center;gap:12px;background:var(--blue-l);border-radius:16px;padding:12px 16px;font-size:22px;text-align:left}
+.tip span{font-size:36px;line-height:1}
+.facts{font-size:20px;color:var(--sub);margin:-10px 0 18px;line-height:1.5}
+.src{color:var(--sub);font-size:14px}
+
+main{flex:1;overflow:auto}
+.view{max-width:980px;margin:0 auto;padding:16px}
+
+/* 이번 주 배너 (듀오링고 유닛 배너 느낌) */
+.unit{background:var(--green);color:#fff;border-radius:18px;padding:14px 18px;box-shadow:0 5px 0 var(--green-d);display:flex;flex-direction:column;gap:4px}
+.unit small{opacity:.9;font-size:15px}
+.unit b{font-size:24px;font-weight:400}
+.unit span{font-size:16px;opacity:.95}
+.unit.blue{background:var(--blue);box-shadow:0 5px 0 var(--blue-d)}
+.unit .btn{align-self:flex-start;margin-top:6px}
+
+/* 길 */
+/* 할 일: 한 줄에 3개씩 반듯하게(세로 화면). 가로 화면은 아래에서 한 줄 5개로 */
+.path{display:grid;grid-template-columns:repeat(3,1fr);justify-items:center;align-items:start;gap:56px 8px;padding:52px 0 32px}
+.step{display:flex;flex-direction:column;align-items:center;position:relative}
+.node{width:84px;height:80px;border-radius:50%;border:0;font-size:38px;background-color:var(--line);box-shadow:0 7px 0 var(--line-d);position:relative;transition:transform .1s;
+  background-image:radial-gradient(ellipse 60% 40% at 50% 22%,rgba(255,255,255,.45),transparent 70%)}
+.node.cur{outline:6px solid var(--green-l);outline-offset:8px}
+.node:active{transform:translateY(6px) scale(.94);box-shadow:0 1px 0 var(--line-d)}
+.node.cur{background-color:var(--green);box-shadow:0 7px 0 var(--green-d);animation:pulse 1.6s ease-in-out infinite}
+.node.cur:active{box-shadow:0 1px 0 var(--green-d)}
+.node.done{background-color:var(--gold);box-shadow:0 7px 0 var(--gold-d)}
+.node.done::after{content:'✓';position:absolute;right:-4px;bottom:-4px;width:30px;height:30px;border-radius:50%;background:#fff;color:var(--gold-d);font-size:20px;line-height:28px;border:2px solid var(--gold-d)}
+.node.goal{cursor:default;background-color:var(--star-l);box-shadow:0 7px 0 var(--star-l-d)}
+.node.goal.done{background-color:var(--gold);box-shadow:0 7px 0 var(--gold-d)}
+.node.goal.done::after{display:none}
+.label{font-size:20px;margin-top:12px}
+.bubble{position:absolute;bottom:calc(100% + 6px);white-space:nowrap;background:#fff;border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-size:17px;color:var(--green);animation:bob 1.6s ease-in-out infinite}
+.bubble::after{content:'';position:absolute;left:50%;top:100%;margin-left:-8px;border:8px solid transparent;border-top-color:var(--line)}
+@keyframes pulse{50%{transform:scale(1.06)}}
+@keyframes bob{50%{transform:translateY(-4px)}}
+
+/* 별 모으기: 밤하늘에 별을 하나씩 채움. 아직 못 받은 별은 흐리게 + 숫자 */
+.river{border-radius:24px;margin-top:16px;padding:24px 0;display:flex;flex-direction:column;align-items:center;gap:14px;
+  background:radial-gradient(#fff6 1.5px,transparent 2px) 0 0/52px 52px,radial-gradient(#fff3 1px,transparent 1.5px) 26px 26px/52px 52px,linear-gradient(#2b3180,#4d58b8)}
+.stone-row{display:flex;align-items:center;gap:10px;transform:translateX(var(--x))}
+.stone{width:72px;height:72px;border:0;border-radius:50%;background:none;font-size:62px;position:relative}
+.stone>*{grid-area:1/1}
+.stone>img.e{width:1em;height:1em}
+.stone:not(.done):not(.gift)>img.e{filter:grayscale(1) brightness(1.8);opacity:.3}
+.stone>b{font-weight:400;font-size:22px;color:#fff;text-shadow:0 1px 3px #0008}
+.stone.gift{font-size:46px;background:#ffffff22;outline:4px solid var(--gold);outline-offset:3px}
+.flag{background:#fff;border:2px solid var(--gold);border-radius:12px;padding:4px 10px;font-size:16px;max-width:180px}
+.me{position:absolute;left:50%;bottom:60%;transform:translateX(-50%);font-size:40px;animation:bob 1.4s ease-in-out infinite;pointer-events:none}
+.bank{position:relative;margin-top:6px;padding:10px 24px;border-radius:16px;background:var(--green-l);font-size:20px}
+.bank .me{bottom:80%}
+
+/* 아래 탭 */
+.tabs{display:flex;border-top:2px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;border:0;background:none;padding:8px 0 10px;font-size:26px;display:flex;flex-direction:column;align-items:center;border-top:3px solid transparent;color:var(--sub)}
+.tabs button span{font-size:15px}
+.tabs button.on{color:var(--blue);border-top-color:var(--blue);background:var(--blue-l)}
+
+/* 버튼 */
+.btn{border:0;border-radius:16px;padding:14px 24px;font-size:21px;color:#fff;background:var(--green);box-shadow:0 5px 0 var(--green-d);transition:transform .08s}
+.btn:active{transform:translateY(5px);box-shadow:none}
+.btn.white{background:#fff;color:var(--blue);border:2px solid var(--line);box-shadow:0 5px 0 var(--line)}
+.btn.sm{font-size:17px;padding:8px 14px}
+.btn:disabled{background:var(--line);color:#aaa;box-shadow:0 5px 0 var(--line-d);transform:none}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.row .btn{flex:1}
+
+/* 겹쳐 뜨는 화면 */
+.full{position:fixed;inset:0;background:#fff;z-index:10;overflow:auto}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.panel{background:#fff;width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));text-align:center;animation:up .2s ease-out}
+.panel h2{font-weight:400;font-size:28px;margin:6px 0 20px}
+.panel h2 span{display:block;font-size:.85em;color:var(--sub);margin-top:2px}
+/* 다 했어요? — 그림 버튼 두 개. 초록(했어요)이 더 크고 오른쪽 */
+.asktop{position:relative;display:inline-block;animation:popin .45s cubic-bezier(.3,1.6,.6,1)}
+.spk2{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:12px;border:0;background:var(--blue-l);border-radius:16px;font-size:28px;padding:8px 10px;box-shadow:0 4px 0 #b9e3fb}
+.picks{display:flex;gap:14px;align-items:stretch}
+.pick{flex:1;border:0;border-radius:24px;padding:14px 8px 12px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:22px;transition:transform .08s}
+.pick img.e{font-size:60px}
+.pick.no{background:#fff;color:var(--sub);border:3px solid var(--line);box-shadow:0 6px 0 var(--line)}
+.pick.yes{flex:1.6;background:var(--green);color:#fff;box-shadow:0 6px 0 var(--green-d)}
+.pick:active{transform:translateY(6px);box-shadow:none}
+.node.pop{animation:popin .5s cubic-bezier(.3,1.6,.6,1)}
+@keyframes popin{0%{transform:scale(.5)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+.big{font-size:84px;line-height:1}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+
+/* 배움 */
+.lesson{max-width:720px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:16px}
+.ltop{display:flex;align-items:center;gap:14px}
+.ltop .bar{flex:1;margin:0}
+.x{border:0;background:none;font-size:28px;color:var(--sub);padding:4px 8px}
+.tag{color:var(--sub);font-size:16px;margin:16px 0 4px}
+.talk{display:flex;align-items:flex-end;gap:12px;margin:8px 0 6px}
+.mascot{font-size:72px;line-height:1}
+.say{position:relative;flex:1;border:2px solid var(--line);border-radius:18px;padding:14px 50px 14px 16px;font-size:21px;line-height:1.4}
+.spk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:var(--blue-l);border-radius:12px;font-size:22px;padding:6px 8px}
+.lesson h2{font-weight:400;font-size:28px;margin:18px 0 14px}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.choice{border:2px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 5px 0 var(--line);padding:16px 8px;font-size:21px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.choice span{font-size:56px;line-height:1.1}
+.choice.sel{border-color:var(--blue);background:var(--blue-l);box-shadow:0 5px 0 var(--blue);color:var(--blue-d)}
+.choice.wrong{opacity:.4;animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.lfoot{margin:auto -16px -16px;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-top:2px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lfoot .msg{flex:1;font-size:22px;min-width:200px}
+.lfoot .btn{min-width:160px}
+.lfoot.good{background:var(--green-l);color:var(--green-d);border-color:transparent}
+.lfoot.bad{background:var(--red-l);color:var(--red-d);border-color:transparent}
+.lfoot.bad .btn{visibility:hidden}
+
+/* 보상·축하 카드 */
+.show{display:flex;align-items:center;justify-content:center;min-height:100%;padding:24px}
+.card{text-align:center;max-width:720px}
+.card .big{font-size:120px;animation:pop .5s cubic-bezier(.3,1.6,.6,1)}
+.card h2{font-weight:400;font-size:30px;color:var(--sub);margin:12px 0}
+.card p{font-size:28px;margin:0 0 28px;line-height:1.4}
+.card p.huge{font-size:clamp(40px,8vw,84px);color:var(--ink);word-break:keep-all}
+.card .btn{min-width:220px}
+@keyframes pop{from{transform:scale(.3)}}
+.conf{position:fixed;top:-20px;width:12px;height:16px;border-radius:3px;z-index:20;animation:fall 2.2s ease-in forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+
+/* 설정 */
+.set{max-width:640px;margin:0 auto;padding:20px 16px 40px;font-size:18px}
+.set h2{font-weight:400;font-size:28px}
+.set h3{font-weight:400;font-size:21px;margin:26px 0 8px}
+.set h3 small{display:block;color:var(--sub);font-size:15px;margin-top:2px}
+.set label{display:flex;align-items:center;gap:12px;margin:10px 0}
+.set input,.set select{font:inherit;font-size:18px;padding:8px 10px;border:2px solid var(--line);border-radius:12px;min-width:0;background:#fff}
+.set label input,.set label select{flex:1}
+.item{margin:8px 0;flex-wrap:nowrap}
+.item .emo{width:64px;text-align:center}
+.item .at{width:76px}
+.item .nm,.item .tx{flex:1}
+.set .row>b{font-size:28px;min-width:60px;text-align:center}
+.set .row .btn.sm{flex:0}
+.week{padding-left:20px;line-height:1.5}
+.week li{margin:6px 0}
+.week li.today{color:var(--green-d)}
+.week small,.src{color:var(--sub);font-size:14px}
+.end{margin-top:28px}
+
+/* 태블릿(아이패드 프로 10.5 = 세로 834 / 가로 1112 기준): 5살이 한눈에 알아보게 전부 크게 */
+@media (min-width:768px) and (min-height:700px){
+  .top{padding:14px 28px}
+  #date{font-size:22px} #clock{font-size:44px}
+  .chip{font-size:32px;padding:8px 18px;border-radius:18px}
+  .icon{font-size:40px}
+  .bar{height:26px}
+  .view{padding:24px 28px}
+  .cards{grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+  .tcard{padding:16px 18px;border-radius:26px;gap:16px}
+  .ti{width:74px;height:74px;font-size:48px;border-radius:20px}
+  .tt small{font-size:20px} .tt b{font-size:34px} .tt span{font-size:19px}
+  .tcard .bar{height:18px}
+  .tip{font-size:30px;padding:16px 22px;border-radius:20px}
+  .tip span{font-size:54px}
+  .facts{font-size:26px}
+  .src{font-size:18px}
+  .set select{font-size:22px}
+  .unit{padding:18px 26px;border-radius:24px}
+  .unit small{font-size:20px} .unit b{font-size:36px} .unit span{font-size:22px}
+  .path{gap:80px 16px;padding-top:80px}
+  .node{width:150px;height:142px;font-size:76px;box-shadow:0 10px 0 var(--line-d)}
+  .node.cur{box-shadow:0 10px 0 var(--green-d)}
+  .node.done{box-shadow:0 10px 0 var(--gold-d)}
+  .node.goal{box-shadow:0 10px 0 var(--star-l-d)}
+  .node.goal.done{box-shadow:0 10px 0 var(--gold-d)}
+  .node.done::after{width:46px;height:46px;font-size:32px;line-height:42px;border-width:3px}
+  .label{font-size:32px;margin-top:18px;text-align:center;word-break:keep-all}
+  .bubble{font-size:26px;padding:8px 18px;border-radius:18px}
+  .river{gap:22px;padding:36px 0}
+  .stone-row{transform:translateX(calc(var(--x) * 1.8))}
+  .stone{width:112px;height:112px;font-size:96px}
+  .stone>b{font-size:34px}
+  .stone.gift{font-size:72px;outline-width:6px}
+  .flag{font-size:24px;max-width:300px;padding:6px 14px}
+  .me{font-size:64px}
+  .bank{font-size:28px;padding:14px 32px}
+  .tabs button{font-size:44px;padding:10px 0 14px}
+  .tabs button span{font-size:22px}
+  .btn{font-size:28px;padding:18px 30px;border-radius:20px}
+  .btn.sm{font-size:22px;padding:10px 18px}
+  .panel{max-width:760px;padding:36px 32px}
+  .panel .big{font-size:140px}
+  .panel h2{font-size:42px;margin:12px 0 30px}
+  .spk2{font-size:40px;padding:10px 14px;border-radius:20px}
+  .picks{gap:22px}
+  .pick{font-size:32px;padding:22px 10px 18px;border-radius:30px}
+  .pick img.e{font-size:100px}
+  .lesson{max-width:900px;padding:24px 28px}
+  .ltop .bar{height:26px}
+  .x{font-size:40px}
+  .tag{font-size:22px}
+  .mascot{font-size:120px}
+  .say{font-size:32px;padding:20px 72px 20px 24px;border-radius:24px}
+  .spk{font-size:34px;padding:8px 12px}
+  .lesson h2{font-size:42px;margin:28px 0 22px}
+  .choices{grid-template-columns:repeat(3,1fr);gap:22px}
+  .choice{font-size:30px;padding:24px 10px;border-radius:24px;box-shadow:0 7px 0 var(--line)}
+  .choice.sel{box-shadow:0 7px 0 var(--blue)}
+  .choice span{font-size:110px}
+  .choice span.multi{font-size:64px}
+  .lfoot{margin:auto -28px -24px;padding:24px 28px}
+  .lfoot .msg{font-size:32px}
+  .lfoot .btn{min-width:240px}
+  .card .big{font-size:200px}
+  .card h2{font-size:40px}
+  .card p{font-size:38px}
+  .card p.huge{font-size:clamp(60px,9vw,110px)}
+  .set{font-size:22px;max-width:760px}
+  .set input{font-size:22px}
+}
+/* 가로 태블릿: 화면이 낮으니 길을 옆으로 눕혀서 스크롤 없이 한 화면에 */
+@media (min-width:1000px) and (orientation:landscape){
+  .path{display:flex;flex-direction:row;justify-content:space-around;align-items:flex-start;gap:8px;padding:58px 0 24px}
+  .unit{padding:12px 22px;flex-direction:row;align-items:baseline;flex-wrap:wrap;column-gap:14px}
+  .unit b{font-size:30px}
+  .step{flex:1}
+  .label{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="when"><div id="date"></div><div id="clock"></div></div>
+  <div class="chip" title="모은 별"><img class="e" src="img/2b50.webp" alt=""> <b id="stoneCount">0</b></div>
+  <button class="icon" id="gear" aria-label="부모님 설정"><img class="e" src="img/2699.webp" alt=""></button>
+</header>
+<main>
+  <div id="view-today" class="view">
+    <section class="cards">
+      <div class="tcard leave">
+        <div class="ti"><img class="e" src="img/23f0.webp" alt=""></div>
+        <div class="tt"><small id="leaveLabel"></small><b id="leaveMin"></b>
+          <div class="bar"><i id="bar"></i></div><span id="barText"></span></div>
+      </div>
+      <button class="tcard wx" id="wxCard"></button>
+    </section>
+    <div class="unit" id="unit"></div>
+    <div class="path" id="path"></div>
+  </div>
+  <div id="view-stones" class="view" hidden>
+    <div class="unit blue"><b>별 모으기</b><span id="nextReward"></span><button class="btn white sm" id="bigReward"><img class="e" src="img/1f381.webp" alt=""> 보상 크게 보기</button></div>
+    <div class="river" id="river"></div>
+  </div>
+</main>
+<nav class="tabs">
+  <button data-tab="today" class="on"><img class="e" src="img/1f3e0.webp" alt=""><span>오늘</span></button>
+  <button data-tab="stones"><img class="e" src="img/2b50.webp" alt=""><span>별 모으기</span></button>
+</nav>
+<div id="sheet" class="sheet" hidden></div>
+<div id="lesson" class="full" hidden></div>
+<div id="show" class="full" hidden></div>
+<div id="settings" class="full" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
