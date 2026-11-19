@@ -441,3 +441,5 @@ syncDay();
 renderAll();
 loadWeather();
 setInterval(() => { syncDay() ? renderAll() : renderTop(); loadWeather(); }, 15000); // 날씨는 30분마다만 새로 받음
+// 인터넷 끊겨도 열리게 (https 주소에서만 됨. 집 PC 주소 http://192.168...에서는 그냥 넘어감)
+navigator.serviceWorker?.register('sw.js').catch(() => {});
