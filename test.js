@@ -1,6 +1,6 @@
 // 실행: node morning-app/test.js
 import assert from 'node:assert/strict';
-import { weekOf, lessonFor, crossStone, minutesLeft, rush, timeFill, dustGrade, summarizeWeather } from './logic.js';
+import { weekOf, lessonFor, crossStone, minutesLeft, rush, timeFill, listId, dustGrade, summarizeWeather } from './logic.js';
 import { WEEKS } from './curriculum.js';
 
 const D = (m, d) => new Date(2026, m - 1, d, 8, 0);
@@ -29,6 +29,9 @@ assert.equal(s.stones, 10);
 assert.equal(minutesLeft(new Date(2026, 10, 17, 8, 10), '08:50'), 40);
 assert.deepEqual([16, 15, 6, 5, 0, -10].map(rush), ['calm', 'soon', 'soon', 'now', 'now', 'now']);
 assert.deepEqual([90, 60, 30, 0, -5].map(timeFill), [0, 0, 0.5, 1, 1]);
+assert.equal(listId('https://music.youtube.com/playlist?list=PLCHjB9GTeUxw&si=Xt&drli=1'), 'PLCHjB9GTeUxw');
+assert.equal(listId(' PLCHjB9GTeUxw '), 'PLCHjB9GTeUxw');
+assert.equal(listId('"><script>'), '');
 
 assert.equal(dustGrade(30, 15), '좋음');
 assert.equal(dustGrade(31, 10), '보통');

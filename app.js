@@ -1,5 +1,5 @@
 import { WEEKS } from './curriculum.js';
-import { dayKey, lessonFor, crossStone, minutesLeft, rush, timeFill, summarizeWeather, SAY, ROUTINE } from './logic.js';
+import { dayKey, lessonFor, crossStone, minutesLeft, rush, timeFill, listId, summarizeWeather, SAY, ROUTINE } from './logic.js';
 
 const KEY = 'morning-bridge-v1';
 // 날씨 지역(시청 근처 좌표). 동네 단위 정밀도는 필요 없어서 큰 도시만.
@@ -32,7 +32,7 @@ function load() {
     routine: ROUTINE,
     rewards: [{ at: 5, text: '예시) 좋아하는 스티커 한 장' }, { at: 10, text: '예시) 주말에 놀이터 가기' }],
     stones: 0, lastStone: null, today: null, done: [],
-    city: '서울', coords: null, wxCache: null,
+    city: '서울', coords: null, wxCache: null, music: '',
   };
   try { return { ...base, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return base; }
 }
@@ -111,11 +111,38 @@ async function speak(...lines) {
   const id = ++talkId;
   player.pause();
   try { speechSynthesis.cancel(); } catch {}
+  duck(lines.some(Boolean));
   for (const t of lines.filter(Boolean)) {
     if (id !== talkId) return;
     await sayOne(t, id);
   }
+  if (id === talkId) duck(false);
 }
+
+// ---------- 아침 음악 (부모님이 넣은 유튜브 재생목록을 섞어서) ----------
+// 아이패드는 소리 나는 영상을 터치 없이 못 틀어서, 첫 할 일을 누를 때 같이 시작함.
+let yt = null, ytReady = false, musicOn = false, musicOff = false; // musicOff: 직접 끈 날은 다시 안 켬
+function setupMusic() {
+  if (!state.music) return;
+  document.body.classList.add('has-music');
+  show('#music');
+  window.onYouTubeIframeAPIReady = () => {
+    yt = new YT.Player('yt', {
+      playerVars: { listType: 'playlist', list: state.music, playsinline: 1, rel: 0 },
+      events: {
+        onReady: () => { ytReady = true; try { yt.setShuffle(true); yt.setLoop(true); } catch {} },
+        onStateChange: (e) => { musicOn = e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING; $('#musicBtn').classList.toggle('on', musicOn); },
+      },
+    });
+  };
+  document.head.append(Object.assign(document.createElement('script'), { src: 'https://www.youtube.com/iframe_api' }));
+}
+function startMusic() {
+  if (!ytReady || musicOn || musicOff) return;
+  const n = yt.getPlaylist()?.length || 1;
+  yt.playVideoAt(Math.floor(Math.random() * n)); // 첫 곡도 랜덤
+}
+function duck(on) { try { if (ytReady) yt.setVolume(on ? 25 : 100); } catch {} } // 앱이 말할 땐 음악 작게
 function confetti() {
   const colors = ['#58c322', '#ffc61a', '#1fa8f0', '#ff7ab6', '#ff9f1a'];
   for (let i = 0; i < 40; i++) {
@@ -146,6 +173,7 @@ function renderTop() {
   $('.leave').dataset.rush = counting ? rush(left) : 'calm';
   $('.leave .bar').hidden = !counting;
   $('#bar').style.width = `${timeFill(left) * 100}%`;
+  if (school && left <= 0 && musicOn) { yt.pauseVideo(); musicOff = true; } // 출발 시간엔 음악 끄기
   const list = items(), n = list.filter((i) => isDone(i.id)).length;
   $('#barText').textContent = `${n}/${list.length} 했어요 · ${state.depart} 출발`;
   renderWx();
@@ -360,6 +388,8 @@ function openSettings() {
     <h2>부모님 설정</h2>
     <label>아이 이름 <input id="sName" value="${esc(state.name)}" placeholder="예) 하윤"></label>
     <label>출발 시각 <input id="sDepart" type="time" value="${esc(state.depart)}"></label>
+    <label>아침 음악 <input id="sMusic" value="${state.music ? `https://music.youtube.com/playlist?list=${state.music}` : ''}" placeholder="유튜브(뮤직) 재생목록 링크 붙여넣기"></label>
+    <p class="src">첫 할 일을 누르면 섞어서 재생돼요. 비우면 음악 없음. 다른 곳 재생을 막아 둔 곡은 건너뛰어요.</p>
     <label>날씨 지역 <select id="sCity">${[...Object.keys(CITIES), HERE].map((c) =>
       `<option${(state.coords ? c === HERE : c === state.city) ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
     <h3>아침 할 일</h3><div id="sRoutine">${state.routine.map(rRow).join('')}</div>
@@ -405,7 +435,12 @@ function openSettings() {
     const city = $('#sCity').value;
     if (city === HERE && coords) state.coords = coords;
     else if (city !== HERE) { state.city = city; state.coords = null; }
-    save(); hide('#settings'); renderAll(); loadWeather();
+    const music = listId($('#sMusic').value);
+    const musicChanged = music !== state.music;
+    state.music = music;
+    save();
+    if (musicChanged) return location.reload(); // 플레이어를 새 재생목록으로 다시 만들기
+    hide('#settings'); renderAll(); loadWeather();
   };
 }
 
@@ -414,8 +449,13 @@ $('#path').onclick = (e) => {
   const b = e.target.closest('[data-i]');
   if (!b) return;
   const it = items()[+b.dataset.i];
-  haptic(); sfx('tap');
+  haptic(); sfx('tap'); startMusic();
   it.id === LESSON ? openLesson() : openSheet(it);
+};
+$('#musicBtn').onclick = () => {
+  if (!ytReady) return;
+  haptic();
+  if (musicOn) { yt.pauseVideo(); musicOff = true; } else { musicOff = false; startMusic(); }
 };
 $('#river').onclick = (e) => {
   const r = state.rewards.find((x) => x.at === +e.target.closest('[data-at]')?.dataset.at);
@@ -440,6 +480,7 @@ document.querySelectorAll('.tabs button').forEach((t) => (t.onclick = () => {
 syncDay();
 renderAll();
 loadWeather();
+setupMusic();
 setInterval(() => { syncDay() ? renderAll() : renderTop(); loadWeather(); }, 15000); // 날씨는 30분마다만 새로 받음
 // 인터넷 끊겨도 열리게 (https 주소에서만 됨. 집 PC 주소 http://192.168...에서는 그냥 넘어감)
 navigator.serviceWorker?.register('sw.js').catch(() => {});

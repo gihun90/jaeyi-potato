@@ -51,6 +51,9 @@ export function minutesLeft(now, hhmm) {
   return Math.ceil((new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m) - now) / 60000);
 }
 
+// 유튜브·유튜브 뮤직 재생목록 링크(또는 번호만)에서 재생목록 번호만 꺼냄. 이상한 글자는 버림.
+export const listId = (s) => (String(s).match(/[?&]list=([\w-]+)/) || String(s).trim().match(/^([\w-]{10,})$/) || [])[1] || '';
+
 // 출발 알림 단계. 분 기준은 정한 값(공식 근거 없음): 60분 전부터 막대가 차고, 15분 전 서두르기, 5분 전 지금 가기
 export const RUSH = { window: 60, soon: 15, now: 5 };
 export const rush = (left) => (left > RUSH.soon ? 'calm' : left > RUSH.now ? 'soon' : 'now');

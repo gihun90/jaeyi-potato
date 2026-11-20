@@ -14,8 +14,9 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // 날씨는 저장본을 쓰면 옛 날씨가 보이니 저장하지 않음 (앱이 따로 30분 기억함)
-  if (e.request.method !== 'GET' || url.hostname.endsWith('open-meteo.com')) return;
+  // 앱 파일과 글꼴만 저장. 날씨(옛 날씨가 보이면 안 됨)·유튜브(영상은 너무 큼)는 그냥 인터넷으로.
+  const mine = url.origin === location.origin || /^fonts\.g(oogleapis|static)\.com$/.test(url.hostname);
+  if (e.request.method !== 'GET' || !mine) return;
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
     try {
