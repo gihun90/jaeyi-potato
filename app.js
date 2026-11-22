@@ -1,4 +1,5 @@
 import { WEEKS } from './curriculum.js';
+import { kidArt } from './kid.js';
 import { dayKey, lessonFor, crossStone, minutesLeft, rush, timeFill, listId, summarizeWeather, SAY, ROUTINE } from './logic.js';
 
 const KEY = 'morning-bridge-v1';
@@ -223,17 +224,15 @@ function renderPath() {
   $('#unit').innerHTML = `<small>${m}월 ${w}주차 · ${esc(L.theme)}${L.exact ? '' : ' (이번 주 자료가 없어 가까운 주를 보여 줘요)'}</small>
     <b>${esc(L.sub)}</b><span>${esc(L.goal)}</span>`;
   const list = items(), cur = list.findIndex((i) => !isDone(i.id));
+  // 할 일 카드: 아이 얼굴이 그 일을 하는 그림(없으면 3D 그림)
   $('#path').innerHTML = list.map((it, i) => `
-    <div class="step">
-      ${i === cur ? `<div class="bubble">${state.name ? esc(state.name) + ', ' : ''}이거 하자!</div>` : ''}
-      <button class="node ${isDone(it.id) ? 'done' : i === cur ? 'cur' : ''} ${it.id === justDone ? 'pop' : ''}" data-i="${i}" aria-label="${esc(it.label)}">${ico(it.emoji)}</button>
-      <div class="label">${esc(it.label)}</div>
-    </div>`).join('') + `
-    <div class="step">
-      <div class="node goal ${cur < 0 ? 'done' : ''}">${ico('⭐')}</div><div class="label">별 받기</div>
-    </div>`;
-  // 세로 태블릿에선 길이 길어 화면 밖으로 나가므로 지금 할 일을 화면 가운데로
-  $('.node.cur')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    <button class="task ${isDone(it.id) ? 'done' : i === cur ? 'cur' : ''} ${it.id === justDone ? 'pop' : ''}" data-i="${i}" aria-label="${esc(it.label)}">
+      ${i === cur ? `<span class="gotag">${state.name ? esc(state.name) + ', ' : ''}이거 하자!</span>` : ''}
+      <span class="art">${kidArt(it.label) || ico(it.emoji)}</span><span class="label">${esc(it.label)}</span>
+    </button>`).join('') + `
+    <div class="task goal ${cur < 0 ? 'done' : ''}"><span class="art">${kidArt('별')}</span><span class="label">별 받기</span></div>`;
+  // 세로 화면에선 길이 길어 화면 밖으로 나가므로 지금 할 일이 보이게
+  $('.task.cur')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 const sortedRewards = () => [...state.rewards].sort((a, b) => a.at - b.at);
@@ -284,7 +283,7 @@ function openSheet(it) {
   // 글을 못 읽어도 되게: 큰 그림 + 목소리 + 그림 버튼(👍 했어요 / ⏳ 아직). 초록 버튼이 더 크고 오른쪽.
   const pick = (a, e, t, main) => `<button class="pick ${main ? 'yes' : 'no'}" data-a="${a}">${ico(e)}<span>${t}</span></button>`;
   $('#sheet').innerHTML = `<div class="panel">
-    <div class="asktop"><div class="big">${ico(d ? '⭐' : it.emoji)}</div>
+    <div class="asktop"><div class="big">${(!d && kidArt(it.label)) || ico(d ? '⭐' : it.emoji)}</div>
       <button class="spk2" data-a="say" aria-label="다시 듣기">${ico('🔊')}</button></div>
     <h2>${esc(it.label)}<span>${d ? '벌써 했어요!' : '다 했어요?'}</span></h2>
     ${tips.length ? tipsHtml(tips) : ''}
